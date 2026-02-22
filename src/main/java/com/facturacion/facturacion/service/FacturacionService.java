@@ -1,6 +1,7 @@
 package com.facturacion.facturacion.service;
 
 import com.facturacion.facturacion.dto.CapacityAgrupadaDTO;
+import com.facturacion.facturacion.dto.CapacityDTO;
 import com.facturacion.facturacion.dto.FacturaAgrupadaDTO;
 import com.facturacion.facturacion.dto.FacturaConsolidadaDTO;
 import com.facturacion.facturacion.dto.FacturacionConsolidadaResponse;
@@ -50,17 +51,20 @@ public class FacturacionService {
     private final ConductorRepository conductorRepository;
     private final CompaniaRepository companiaRepository;
     private final CapacityRepository capacityRepository;
+    private final CompaniaService companiaService;
 
     public FacturacionService(LoteFacturacionRepository loteFacturacionRepository,
                               FacturaRepository facturaRepository, ConductorCompaniaRepository
                                       conductorCompaniaRepository, ConductorRepository conductorRepository,
-                              CompaniaRepository companiaRepository, CapacityRepository capacityRepository) {
+                              CompaniaRepository companiaRepository, CapacityRepository capacityRepository,
+                              CompaniaService companiaService) {
         this.loteFacturacionRepository = loteFacturacionRepository;
         this.facturaRepository = facturaRepository;
         this.conductorCompaniaRepository = conductorCompaniaRepository;
         this.conductorRepository = conductorRepository;
         this.companiaRepository = companiaRepository;
         this.capacityRepository = capacityRepository;
+        this.companiaService = companiaService;
 
     }
 
@@ -80,7 +84,6 @@ public class FacturacionService {
         // (o asociados a una factura) a medida que los encontremos.
         Map<String, ViajeAgrupadoDTO> viajesMap = new HashMap<>(); // Cambiamos a HashMap
         for (ViajeAgrupadoDTO viaje : viajesAgrupados) {
-
             Optional<Factura> facturaDb = facturaRepository.findByIdViaje(viaje.getIdViaje());
          //Para que no procese viajes que ya han sido pagados en otras facturas
             if (facturaDb.isPresent() && facturaDb.get().getEstado().contains("PAGADO")) {
@@ -154,11 +157,14 @@ public class FacturacionService {
                             factura.getIdViaje().equals(facturaAgrupada.getIdViaje())).findFirst().orElse(null);
                     if (facturaPendiente != null) {
 
-                        Optional<Compania> compania = companiaRepository.findById(facturaPendiente.getIdCompania());
-                        if (compania.isPresent()) {
-                            nombreCompania = compania.get().getNombre();
-                            idCompania = compania.get().getId();
+                        if (facturaPendiente.getIdCompania() != null) {
+                            Optional<Compania> compania = companiaRepository.findById(facturaPendiente.getIdCompania());
+                            if (compania.isPresent()) {
+                                nombreCompania = compania.get().getNombre();
+                                idCompania = compania.get().getId();
+                            }
                         }
+
                         String estado = "PAGADO";
                         if (facturaPendiente.getEstado().equals("PENDIENTE")) {
                             estado = facturaPendiente.getEstado()+"-PAGADO";
@@ -568,13 +574,27 @@ public class FacturacionService {
 
         // Obtener las capacities asociadas a este lote
         List<Capacity> capacities = capacityRepository.findByIdLoteFacturacion(idLoteFacturacion);
-        List<CapacityAgrupadaDTO> capacitiesDTO = capacities.stream()
-                .map(capacity -> new CapacityAgrupadaDTO(
-                        "",
-                        capacity.getContractId(),
-                        capacity.getValorAPagar()
-                ))
-                .collect(Collectors.toList());
+        List<CapacityAgrupadaDTO> capacitiesDTO = new ArrayList<>();
+
+        for (Capacity capacity : capacities) {
+            List<Factura> facturaCapacity = getFacturasByContractid(capacity.getContractId());
+            List<CapacityDTO> capacitiesCapacityDTO  = new ArrayList<>();
+            for (Factura factura : facturaCapacity) {
+                String companyName = "";
+                Optional<Compania> compania = companiaService.buscarCompaniaPorId(factura.getIdCompania());
+                if (compania.isPresent()) {
+                    companyName = compania.get().getNombre();
+                }
+                capacitiesCapacityDTO.add(new CapacityDTO(factura.getContractId(), factura.getIdViaje(),
+                        factura.getDriverName(), companyName));
+
+            }
+            capacitiesDTO.add(new CapacityAgrupadaDTO(
+                            "",
+                            capacity.getContractId(),
+                            capacity.getValorAPagar(),
+                            capacitiesCapacityDTO));
+        }
 
         BigDecimal totalCapacities = capacitiesDTO.stream()
                 .map(CapacityAgrupadaDTO::getValorAPagar)

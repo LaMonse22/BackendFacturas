@@ -2,15 +2,19 @@ package com.facturacion.facturacion.service;
 
 
 import com.facturacion.facturacion.dto.CapacityAgrupadaDTO;
+import com.facturacion.facturacion.dto.CapacityDTO;
 import com.facturacion.facturacion.dto.FacturaAgrupadaDTO;
 import com.facturacion.facturacion.dto.PrevisualizacionInicialDTO;
 import com.facturacion.facturacion.dto.ViajeAgrupadoDTO;
+import com.facturacion.facturacion.model.Compania;
+import com.facturacion.facturacion.model.Factura;
 import org.apache.poi.ss.usermodel.Cell;
 import org.apache.poi.ss.usermodel.DateUtil;
 import org.apache.poi.ss.usermodel.Row;
 import org.apache.poi.ss.usermodel.Sheet;
 import org.apache.poi.ss.usermodel.Workbook;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -24,10 +28,19 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 @Service
 public class ExcelProcessingService {
     private static final DateTimeFormatter MM_DD_YYYY_FORMATTER = DateTimeFormatter.ofPattern("MM/dd/yyyy");
+    private final FacturacionService facturacionService;
+    private final CompaniaService companyService;
+
+   @Autowired
+    public ExcelProcessingService(FacturacionService facturacionService, CompaniaService companyService) {
+        this.facturacionService = facturacionService;
+        this.companyService = companyService;
+    }
 
 
     /**
@@ -118,7 +131,25 @@ public class ExcelProcessingService {
                     // Una capacity aún necesita un ID de viaje para el DTO, aunque sea nulo o vacío
                     // Usamos el contractId como identificador si no hay LoadId definido explícitamente en el Excel para Capacities.
                     // O si se prefiere, se pasa un null o cadena vacía si no tiene un LoadId de viaje asociado.
-                    capacities.add(new CapacityAgrupadaDTO(loadId, contractId, grossPay));
+                    List<Factura> facturas = facturacionService.getFacturasByContractid(contractId);
+                    List<CapacityDTO> capacityDTOList = new ArrayList<>();
+                    for (Factura factura : facturas) {
+                        Optional<Compania> company;
+                        String companyName = "";
+                        if (factura.getIdCompania() != null) {
+                            company = companyService.buscarCompaniaPorId(factura.getIdCompania());
+                            if (company.isPresent()) {
+                                companyName = company.get().getNombre();
+                            }
+                        }
+
+
+                        CapacityDTO  capacityDTO = new CapacityDTO(factura.getContractId(), factura.getIdViaje(),
+                                factura.getDriverName(), companyName);
+                        capacityDTOList.add(capacityDTO);
+
+                    }
+                    capacities.add(new CapacityAgrupadaDTO(loadId, contractId, grossPay, capacityDTOList));
                 } else {
                     // Si es una 'factura' (tiene algún ID de viaje), agrúpala
                     // Prioriza Block Id, luego Trip Id, luego Load Id
@@ -170,6 +201,7 @@ public class ExcelProcessingService {
                 continue;
             }
 
+
             String driverName = row.get("driver name");
             String stop1 = row.get("stop 1");
             LocalDateTime fechaStop1 = parseDate(row.get("stop 1 planned arrival date"));
@@ -180,8 +212,18 @@ public class ExcelProcessingService {
 
             viajesMap.compute(idViaje, (key, existingViaje) -> {
                 if (existingViaje == null) {
-                    return new ViajeAgrupadoDTO(idViaje, driverName, stop1, fechaStop1, stop2, fechaStop2, estadoViaje);
+                        return new ViajeAgrupadoDTO(idViaje, driverName, stop1, fechaStop1, stop2, fechaStop2, estadoViaje);
                 } else {
+
+                    if (driverName != null && !driverName.trim().isEmpty()) {
+                        String conductoresActuales = existingViaje.getDriverName();
+
+                        if (conductoresActuales == null || conductoresActuales.isEmpty()) {
+                            existingViaje.setDriverName(driverName);
+                        } else if (!conductoresActuales.contains(driverName)) {
+                            existingViaje.setDriverName(conductoresActuales + " - " + driverName);
+                        }
+                    }
                     existingViaje.setDestino(stop2);
                     if (fechaStop2 != null && (existingViaje.getFechaDestino() == null || fechaStop2.isAfter(existingViaje.getFechaDestino()))) {
                         existingViaje.setFechaDestino(fechaStop2);

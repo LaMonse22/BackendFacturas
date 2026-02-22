@@ -5,16 +5,13 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
-import java.math.BigDecimal;
-import java.util.List;
-
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-public class CapacityAgrupadaDTO {
-    private String loadId;
+public class CapacityDTO {
     @NotBlank(message = "El Contract id no puede estar vacío.")// Identificador de la carga/viaje asociado a la capacity
-    private String contractId;  // ID del contrato de la capacity
-    private BigDecimal valorAPagar; // Monto a pagar por la capacity
-    private List<CapacityDTO> capacityDTOList;
+    private String contractId;
+    private String blockid;
+    private String driverName;
+    private String compania;
 }
