@@ -16,7 +16,7 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/api/conductor-compania")
-@CrossOrigin(origins = "http://localhost:3000")
+@CrossOrigin(origins = "http://localhost:5173")
 public class ConductorCompaniaController {
 
     private final ConductorCompaniaService conductorCompaniaService;

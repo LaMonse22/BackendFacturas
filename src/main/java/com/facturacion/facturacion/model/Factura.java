@@ -25,7 +25,7 @@ public class Factura {
     @Column(name = "id_viaje", nullable = false)
     private String idViaje;
 
-    @Column(name = "driver_name") // ¡NUEVO CAMPO! Para almacenar el nombre del conductor
+    @Column(name = "driver_name", length = 1000) // ¡NUEVO CAMPO! Para almacenar el nombre del conductor
     private String driverName;
 
     @Column(name = "id_compania")
@@ -43,6 +43,8 @@ public class Factura {
     private String contractId;
     @Column(name = "nombre_compania") // ¡NUEVO CAMPO! Para almacenar el nombre del conductor
     private String nombreCompania;
+    @Column(name = "costoEstimado")
+    private BigDecimal costoEstimado;
 
     private BigDecimal pay;
 

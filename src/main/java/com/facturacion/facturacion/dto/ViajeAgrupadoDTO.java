@@ -6,6 +6,7 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 @Data
@@ -25,4 +26,5 @@ public class ViajeAgrupadoDTO {
     private LocalDateTime fechaDestino;
     @NotNull(message = "El estado no puede ser nulo")
     private String estado;
+    private BigDecimal costoEstimado;
 }

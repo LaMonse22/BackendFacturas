@@ -195,7 +195,21 @@ public class ExcelProcessingService {
         for (Map<String, String> row : viajesData) {
             String blockId = row.get("block id");
             String tripId = row.get("trip id");
+            String estimatedPay = "";
+            BigDecimal estimatedCost;
             String idViaje = (blockId != null && !blockId.trim().isEmpty()) ? blockId : tripId;
+            if (blockId != null && !blockId.trim().isEmpty()) {
+                 estimatedPay = row.get("estimated cost");
+                 System.out.println("sacando el estimado del vlock id " +  blockId + " es " + estimatedPay);
+
+                 estimatedCost = null;
+
+                if (estimatedPay != null && !estimatedPay.trim().isEmpty()) {
+                    estimatedCost = new BigDecimal(estimatedPay);
+                }
+            } else {
+                estimatedCost = BigDecimal.ZERO;
+            }
 
             if (idViaje == null || idViaje.trim().isEmpty()) {
                 continue;
@@ -210,9 +224,11 @@ public class ExcelProcessingService {
 
             String estadoViaje = row.get("trip stage");
 
+            BigDecimal finalEstimatedCost = estimatedCost;
             viajesMap.compute(idViaje, (key, existingViaje) -> {
                 if (existingViaje == null) {
-                        return new ViajeAgrupadoDTO(idViaje, driverName, stop1, fechaStop1, stop2, fechaStop2, estadoViaje);
+                        return new ViajeAgrupadoDTO(idViaje, driverName, stop1, fechaStop1, stop2, fechaStop2,
+                                estadoViaje, finalEstimatedCost);
                 } else {
 
                     if (driverName != null && !driverName.trim().isEmpty()) {
@@ -247,6 +263,7 @@ public class ExcelProcessingService {
         if (cell == null) {
             return "";
         }
+        System.out.println("cell " + cell.getRowIndex() + "celltype: " + cell.getCellType());
         switch (cell.getCellType()) {
             case STRING:
                 return cell.getStringCellValue().trim();

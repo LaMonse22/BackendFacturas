@@ -24,5 +24,6 @@ public class FacturaConsolidadaDTO {
     private String estado; // "ACTIVO" o "PENDIENTE"
     private Long idCompania; // El ID de la compañía que se puede editar
     private String nombreCompania;
-    private float porcentaje;// El nombre de la compañía para mostrar
+    private float porcentaje;//
+    private BigDecimal estimadoCosto;
 }

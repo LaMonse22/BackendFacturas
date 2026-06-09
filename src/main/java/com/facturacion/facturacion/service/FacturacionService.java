@@ -139,7 +139,8 @@ public class FacturacionService {
                         estado, // <-- CAMBIO CLAVE: Viaje asociado a factura = PAGADO
                         idCompania,
                         nombreCompania,
-                        porcentaje
+                        porcentaje,
+                        viajeAsociado.getCostoEstimado()
                 );
                 facturasConsolidadas.add(consolidada);
                 totalFacturasConsolidadas = totalFacturasConsolidadas.add(facturaAgrupada.getValorAPagar());
@@ -185,7 +186,8 @@ public class FacturacionService {
                                 estado, // <-- CAMBIO CLAVE: Viaje asociado a factura = PAGADO
                                 idCompania,
                                 nombreCompania,
-                                0
+                                0,
+                                facturaPendiente.getCostoEstimado()
                         );
                         facturasConsolidadas.add(consolidada);
                         totalFacturasConsolidadas = totalFacturasConsolidadas.add(facturaAgrupada.getValorAPagar());
@@ -243,7 +245,8 @@ public class FacturacionService {
                         estado, // <-- CAMBIO CLAVE: Viaje sin factura = PENDIENTE
                         idCompania,
                         nombreCompania,
-                        porcentaje
+                        porcentaje,
+                        viajePendiente.getCostoEstimado()
                 ));
             });
         }
@@ -557,7 +560,8 @@ public class FacturacionService {
                     factura.getEstado(),
                     factura.getIdCompania(),
                     factura.getNombreCompania(),
-                    porcentaje
+                    porcentaje,
+                    factura.getCostoEstimado()
                     ));
 
             BigDecimal porcentajeBigDecimal = new BigDecimal(String.valueOf(porcentaje));
