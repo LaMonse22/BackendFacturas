@@ -25,6 +25,7 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -217,6 +218,15 @@ public class ExcelProcessingService {
 
 
             String driverName = row.get("driver name");
+
+            String[] stringDrivers = driverName.split(";");
+
+            java.util.Set<String> nombresUnicos = Arrays.stream(stringDrivers)
+                    .map(String::trim)
+                    .collect(java.util.stream.Collectors.toSet());
+            if (nombresUnicos.size() == 1) {
+                driverName = nombresUnicos.iterator().next();
+            }
             String stop1 = row.get("stop 1");
             LocalDateTime fechaStop1 = parseDate(row.get("stop 1 planned arrival date"));
             String stop2 = row.get("stop 2");
@@ -225,19 +235,20 @@ public class ExcelProcessingService {
             String estadoViaje = row.get("trip stage");
 
             BigDecimal finalEstimatedCost = estimatedCost;
+            String finalDriverName = driverName;
             viajesMap.compute(idViaje, (key, existingViaje) -> {
                 if (existingViaje == null) {
-                        return new ViajeAgrupadoDTO(idViaje, driverName, stop1, fechaStop1, stop2, fechaStop2,
+                        return new ViajeAgrupadoDTO(idViaje, finalDriverName, stop1, fechaStop1, stop2, fechaStop2,
                                 estadoViaje, finalEstimatedCost);
                 } else {
 
-                    if (driverName != null && !driverName.trim().isEmpty()) {
+                    if (finalDriverName != null && !finalDriverName.trim().isEmpty()) {
                         String conductoresActuales = existingViaje.getDriverName();
 
                         if (conductoresActuales == null || conductoresActuales.isEmpty()) {
-                            existingViaje.setDriverName(driverName);
-                        } else if (!conductoresActuales.contains(driverName)) {
-                            existingViaje.setDriverName(conductoresActuales + " - " + driverName);
+                            existingViaje.setDriverName(finalDriverName);
+                        } else if (!conductoresActuales.contains(finalDriverName)) {
+                            existingViaje.setDriverName(conductoresActuales + " - " + finalDriverName);
                         }
                     }
                     existingViaje.setDestino(stop2);
