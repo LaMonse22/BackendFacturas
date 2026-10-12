@@ -115,7 +115,7 @@ public class ExcelProcessingService {
                 // Obtener Contract ID y Gross Pay, independientemente de si es factura o capacity
                 String contractId = getCellValueAsString(row.getCell(headerIndexMap.get("contract id")));
                 String grossPayStr = getCellValueAsString(row.getCell(headerIndexMap.get("gross pay"))); // Normaliza también para Gross Pay
-
+                System.out.println("estoy aqui");
 
                 BigDecimal grossPay = BigDecimal.ZERO;
                 if (grossPayStr != null && !grossPayStr.trim().isEmpty()) {
@@ -192,6 +192,10 @@ public class ExcelProcessingService {
      */
     public List<ViajeAgrupadoDTO> agruparViajes(List<Map<String, String>> viajesData) {
         Map<String, ViajeAgrupadoDTO> viajesMap = new LinkedHashMap<>();
+        // Trailer id de la fila base (primera fila) de cada block id
+        Map<String, String> trailerBasePorBlock = new java.util.HashMap<>();
+        // Block ids cuyo primer rejected con el mismo trailer id ya fue evaluado
+        java.util.Set<String> rejectedEvaluado = new java.util.HashSet<>();
 
         for (Map<String, String> row : viajesData) {
             String blockId = row.get("block id");
@@ -201,7 +205,7 @@ public class ExcelProcessingService {
             String idViaje = (blockId != null && !blockId.trim().isEmpty()) ? blockId : tripId;
             if (blockId != null && !blockId.trim().isEmpty()) {
                  estimatedPay = row.get("estimated cost");
-                 System.out.println("sacando el estimado del vlock id " +  blockId + " es " + estimatedPay);
+                 System.out.println("sacando el estimado del block id " +  blockId + " es " + estimatedPay);
 
                  estimatedCost = null;
 
@@ -233,14 +237,38 @@ public class ExcelProcessingService {
             LocalDateTime fechaStop2 = parseDate(row.get("stop 2 planned arrival date"));
 
             String estadoViaje = row.get("trip stage");
+            String trailerId = row.get("trailer id");
+            boolean esBlock = blockId != null && !blockId.trim().isEmpty();
+            boolean esRejected = estadoViaje != null && "rejected".equalsIgnoreCase(estadoViaje.trim());
 
             BigDecimal finalEstimatedCost = estimatedCost;
             String finalDriverName = driverName;
             viajesMap.compute(idViaje, (key, existingViaje) -> {
                 if (existingViaje == null) {
+                        if (esBlock) {
+                            trailerBasePorBlock.put(idViaje, trailerId);
+                            // Si la fila base ya es rejected, ella misma es el primer rejected del trailer
+                            if (esRejected) {
+                                rejectedEvaluado.add(idViaje);
+                            }
+                        }
                         return new ViajeAgrupadoDTO(idViaje, finalDriverName, stop1, fechaStop1, stop2, fechaStop2,
                                 estadoViaje, finalEstimatedCost);
                 } else {
+                    // Primer rejected del block id con el mismo trailer id de la fila base:
+                    // si su costo estimado es mayor, reemplaza al de la fila base (si la base es vacía se deja vacía)
+                    if (esBlock && esRejected && !rejectedEvaluado.contains(idViaje)) {
+                        String trailerBase = trailerBasePorBlock.get(idViaje);
+                        if (trailerBase != null && !trailerBase.trim().isEmpty() && trailerId != null
+                                && trailerBase.trim().equalsIgnoreCase(trailerId.trim())) {
+                            rejectedEvaluado.add(idViaje);
+                            BigDecimal costoBase = existingViaje.getCostoEstimado();
+                            if (costoBase != null && finalEstimatedCost != null
+                                    && finalEstimatedCost.compareTo(costoBase) > 0) {
+                                existingViaje.setCostoEstimado(finalEstimatedCost);
+                            }
+                        }
+                    }
 
                     if (finalDriverName != null && !finalDriverName.trim().isEmpty()) {
                         String conductoresActuales = existingViaje.getDriverName();
